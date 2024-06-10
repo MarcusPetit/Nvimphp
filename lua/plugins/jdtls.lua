@@ -67,6 +67,65 @@ return {
       end
     end
 
+    -- Função para criar arquivo de teste
+    local function create_test_file()
+      local fname = vim.api.nvim_buf_get_name(0)
+      local root_dir = opts.root_dir(fname)
+      local relative_path = fname:sub(#root_dir + 2)
+      local test_path = "src/test/java/" .. relative_path:gsub("src/main/java/", ""):gsub(".java$", "Test.java")
+
+      -- Cria diretórios se não existirem
+      vim.fn.mkdir(vim.fn.fnamemodify(test_path, ":h"), "p")
+
+      -- Verifica se o arquivo de teste já existe
+      if vim.fn.filereadable(test_path) == 0 then
+        local class_name = relative_path:match("([^/]+)%.java$")
+        local test_class_name = class_name .. "Test"
+        local package_name = relative_path:match("^(.+)/[^/]+%.java$"):gsub("/", ".")
+
+        -- Obtém a lista de métodos públicos da classe
+        local methods = {}
+        for line in io.lines(fname) do
+          local method = line:match("public%s+[%w<>%[%]]+%s+([%w_]+)%s*%(")
+          if method then
+            table.insert(methods, method)
+          end
+        end
+
+        -- Solicita ao usuário para selecionar os métodos a serem testados
+        local selected_methods = {}
+        for _, method in ipairs(methods) do
+          local input = vim.fn.input("Testar método " .. method .. "? (s/n): ")
+          if input:lower() == "s" then
+            table.insert(selected_methods, method)
+          end
+        end
+
+        -- Escreve o esqueleto do arquivo de teste
+        local lines = {
+          "package " .. package_name .. ";",
+          "",
+          "import org.junit.jupiter.api.Test;",
+          "import static org.junit.jupiter.api.Assertions.*;",
+          "",
+          "public class " .. test_class_name .. " {",
+          "",
+        }
+        for _, method in ipairs(selected_methods) do
+          table.insert(lines, "    @Test")
+          table.insert(lines, "    public void test" .. method .. "() {")
+          table.insert(lines, "        // TODO: Add test logic for " .. method)
+          table.insert(lines, "    }")
+          table.insert(lines, "")
+        end
+        table.insert(lines, "}")
+        vim.fn.writefile(lines, test_path)
+      end
+
+      -- Abre o arquivo de teste
+      vim.cmd("edit " .. test_path)
+    end
+
     local function attach_jdtls()
       local fname = vim.api.nvim_buf_get_name(0)
       local config = vim.tbl_deep_extend("force", {
@@ -131,6 +190,7 @@ return {
                 ["<leader>tt"] = { require("jdtls.dap").test_class, "Run All Test" },
                 ["<leader>tr"] = { require("jdtls.dap").test_nearest_method, "Run Nearest Test" },
                 ["<leader>tT"] = { require("jdtls.dap").pick_test, "Run Test" },
+                ["<leader>ta"] = { create_test_file, "Create Test File" }, -- Registrar o novo atalho
               }, { mode = "n", buffer = args.buf })
             end
           end
