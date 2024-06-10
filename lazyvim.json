@@ -3,8 +3,8 @@
     "lazyvim.plugins.extras.lang.rust"
   ],
   "news": {
-    "NEWS.md": "4964",
-    "doc/news.txt": "13991"
+    "NEWS.md": "6077",
+    "doc/news.txt": "3959"
   },
-  "version": 4
+  "version": 6
 }
